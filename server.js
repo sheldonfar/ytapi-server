@@ -159,8 +159,9 @@ app.get('/api/customquery', function (req, res) {
     });
 });
 
+var port = process.env.PORT || 8888;
 
-var server = app.listen(8888, function () {
+var server = app.listen(port, function () {
 
     var host = server.address().address;
     var port = server.address().port;
