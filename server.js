@@ -165,8 +165,20 @@ var server = app.listen(port, ipaddress, function () {
 
     var host = server.address().address;
 
-    console.log('Example app listening at http://%s:%s', host, port)
+    console.log((new Date()) + '  app listening at http://%s:%s', host, port)
 
 });
 
 console.log("Server has started.");
+
+wss = new WebSocketServer({
+    server: server,
+    autoAcceptConnections: false
+});
+wss.on('connection', function(ws) {
+    console.log("New connection");
+    ws.on('message', function(message) {
+        ws.send("Received: " + message);
+    });
+    ws.send('Welcome!');
+});
