@@ -2,6 +2,7 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var sqlite3 = require('sqlite3').verbose();
+var WebSocketServer = require('ws').Server;
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(function (req, res, next) {
