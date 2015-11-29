@@ -19,16 +19,18 @@ app.post('/', function (req, res) {
     db.serialize(function () {
         var stmt = db.prepare("INSERT OR REPLACE INTO vid_stats" + "(session_id, video_id, time_from, time_to, time_total) VALUES" + "(?, ?, ?, ?, ?)");
         var stmt2 = db.prepare("INSERT OR REPLACE INTO sessions (session_id) VALUES (?)");
-        req.body.intervals.forEach(function (interval) {
-            stmt.run(req.body.sessionId, req.body.videoId, interval.time_from, interval.time_to, req.body.videoLength);
+        var stmt3 = db.prepare("INSERT OR REPLACE INTO browsers (name, session_id) VALUES (?,?)");
+        if(req.body.intervals) {
+            req.body.intervals.forEach(function (interval) {
+                stmt.run(req.body.sessionId, req.body.videoId, interval.time_from, interval.time_to, req.body.videoLength);
+            });
             stmt2.run(req.body.sessionId);
-        });
-        stmt.finalize();
-        stmt2.finalize();
-
-        db.each("SELECT session_id, video_id, time_from, time_to, time_total FROM vid_stats", function (err, row) {
-            console.log(row.session_id + ", " + row.video_id + ", " + row.time_from + ", " + row.time_to + ", " + row.time_total);
-        });
+            stmt3.run(req.body.browserName, req.body.sessionId);
+            console.log(req.body.browserName);
+            stmt.finalize();
+            stmt2.finalize();
+            stmt3.finalize();
+        }
     });
     db.close();
     res.send(req.body);
@@ -60,6 +62,24 @@ app.get('/api', function (req, res) {
 app.get('/api/counts', function (req, res) {
     var db = new sqlite3.Database('databases/stats.db');
     var stmt = 'SELECT count(DISTINCT session_id) as session_count, count(DISTINCT video_id) as video_count, sum(time_to - time_from) as time_watched, total_time FROM vid_stats JOIN (SELECT sum(time_total) total_time FROM (SELECT DISTINCT session_id, time_total FROM vid_stats))';
+
+    var allRecords = function (callback) {
+        db.all(stmt, function (err, all) {
+            callback(err, all);
+        });
+    };
+    allRecords(function (err, all) {
+        console.log(err);
+        var data = all;
+        //console.log(response);
+        db.close();
+        res.send(data);
+    });
+});
+
+app.get('/api/browsers', function (req, res) {
+    var db = new sqlite3.Database('databases/stats.db');
+    var stmt = 'SELECT count(DISTINCT session_id) count, name from browsers GROUP BY name';
 
     var allRecords = function (callback) {
         db.all(stmt, function (err, all) {
