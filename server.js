@@ -20,7 +20,7 @@ app.post('/', function (req, res) {
         var stmt = db.prepare("INSERT OR REPLACE INTO vid_stats" + "(session_id, video_id, time_from, time_to, time_total) VALUES" + "(?, ?, ?, ?, ?)");
         var stmt2 = db.prepare("INSERT OR REPLACE INTO sessions (session_id) VALUES (?)");
         var stmt3 = db.prepare("INSERT OR REPLACE INTO browsers (name, session_id) VALUES (?,?)");
-        if(req.body.intervals) {
+        if (req.body.intervals) {
             req.body.intervals.forEach(function (interval) {
                 stmt.run(req.body.sessionId, req.body.videoId, interval.time_from, interval.time_to, req.body.videoLength);
             });
@@ -127,7 +127,7 @@ app.get('/api/sessions', function (req, res) {
     }
 });
 
-app.get('/api/videos', function (req, res) {
+app.get('/api/videos/video', function (req, res) {
     var db = new sqlite3.Database('databases/stats.db');
     if (typeof req.query.videoId !== 'undefined') {
         var stmt = "SELECT vid_stats.session_id, GROUP_CONCAT(time_from) as all_time_from, GROUP_CONCAT(time_to) as all_time_to FROM vid_stats WHERE video_id='" + req.query.videoId + "' GROUP BY session_id";
@@ -146,21 +146,38 @@ app.get('/api/videos', function (req, res) {
     }
 });
 
+app.get('/api/videos/lastweek', function (req, res) {
+    var db = new sqlite3.Database('databases/stats.db');
+    var stmt = "SELECT * from vid_stats JOIN sessions ON (vid_stats.session_id = sessions.session_id) WHERE time_added >= date('now', '-7 days')";
+    var allRecords = function (callback) {
+        db.all(stmt, function (err, all) {
+            callback(err, all);
+        });
+    };
+    allRecords(function (err, all) {
+        console.log(err);
+        var data = all;
+        //console.log(response);
+        db.close();
+        res.send(data);
+    });
+});
+
 app.get('/api/videos/views', function (req, res) {
     var db = new sqlite3.Database('databases/stats.db');
-        var stmt = "SELECT count(DISTINCT session_id) views_count, video_id FROM vid_stats GROUP BY video_id";
-        var allRecords = function (callback) {
-            db.all(stmt, function (err, all) {
-                callback(err, all);
-            });
-        };
-        allRecords(function (err, all) {
-            console.log(err);
-            var data = all;
-            //console.log(response);
-            db.close();
-            res.send(data);
+    var stmt = "SELECT count(DISTINCT session_id) views_count, video_id FROM vid_stats GROUP BY video_id";
+    var allRecords = function (callback) {
+        db.all(stmt, function (err, all) {
+            callback(err, all);
         });
+    };
+    allRecords(function (err, all) {
+        console.log(err);
+        var data = all;
+        //console.log(response);
+        db.close();
+        res.send(data);
+    });
 });
 
 app.get('/api/customquery', function (req, res) {
@@ -196,9 +213,9 @@ wss = new WebSocketServer({
     server: server,
     autoAcceptConnections: false
 });
-wss.on('connection', function(ws) {
+wss.on('connection', function (ws) {
     console.log("New connection");
-    ws.on('message', function(message) {
+    ws.on('message', function (message) {
         ws.send("Received: " + message);
     });
     ws.send('Welcome!');
